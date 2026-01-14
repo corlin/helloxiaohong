@@ -177,6 +177,12 @@ export const contentsDb = {
         return result.length > 0 ? rowsToObjects(result[0])[0] : null;
     },
 
+    async getByTitle(title) {
+        const database = await getDb();
+        const result = database.exec('SELECT * FROM contents WHERE title = ?', [title]);
+        return result.length > 0 ? rowsToObjects(result[0])[0] : null;
+    },
+
     async create(data) {
         const database = await getDb();
         database.run(`
@@ -258,6 +264,12 @@ export const schedulesDb = {
         return result.length > 0 ? rowsToObjects(result[0])[0] : null;
     },
 
+    async getByContentId(contentId) {
+        const database = await getDb();
+        const result = database.exec('SELECT * FROM schedules WHERE content_id = ? ORDER BY scheduled_at DESC', [contentId]);
+        return result.length > 0 ? rowsToObjects(result[0]) : [];
+    },
+
     async getPending() {
         const database = await getDb();
         const result = database.exec(`
@@ -313,6 +325,22 @@ export const schedulesDb = {
         await saveDb();
     },
 
+    /**
+     * 原子性地认领任务 (CAS: Check-And-Set)
+     * 只有状态为 pending 的任务会被更新为 running
+     * @returns {boolean} 是否成功认领
+     */
+    async claim(id) {
+        const database = await getDb();
+        const result = database.run(
+            "UPDATE schedules SET status = 'running', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'",
+            [id]
+        );
+        const rowsModified = database.getRowsModified();
+        await saveDb();
+        return rowsModified > 0;
+    },
+
     async resetStuckTasks() {
         const database = await getDb();
         const result = database.run(`
@@ -320,8 +348,9 @@ export const schedulesDb = {
             SET status = 'pending', retry_count = retry_count + 1, error_message = '服务异常重启，自动重置任务'
             WHERE status = 'running'
         `);
+        const rowsModified = database.getRowsModified();
         await saveDb();
-        return database.getRowsModified();
+        return rowsModified;
     },
 
     async cleanup() {

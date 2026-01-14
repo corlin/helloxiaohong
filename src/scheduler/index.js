@@ -33,8 +33,17 @@ async function processSchedule(schedule) {
         message: '开始发布',
     });
 
-    // 更新计划状态为运行中
-    await schedulesDb.update(id, { status: 'running' });
+    // 原子性认领任务
+    const claimed = await schedulesDb.claim(id);
+    if (!claimed) {
+        logger.warn('任务抢占失败或状态已变更', { scheduleId: id });
+        await logsDb.create({
+            scheduleId: id,
+            status: 'failed',
+            message: '任务抢占失败：任务可能已被取消或正在执行中',
+        });
+        return;
+    }
 
     // 检查日发布限制
     if (daily_count >= config.publish.dailyLimit) {

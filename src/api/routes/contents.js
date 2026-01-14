@@ -96,6 +96,13 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ success: false, error: '标题不能为空' });
         }
 
+        // 1. 检查是否存在同名内容
+        const existingContent = await contentsDb.getByTitle(title);
+        if (existingContent) {
+            logger.info('发现已存在的内容，返回现有 ID', { title, id: existingContent.id });
+            return res.json({ success: true, data: { id: existingContent.id } });
+        }
+
         if (!mediaPaths || mediaPaths.length === 0) {
             return res.status(400).json({ success: false, error: '请上传媒体文件' });
         }

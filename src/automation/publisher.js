@@ -200,8 +200,9 @@ async function fillMetadata(page, { title, body, tags, location }) {
             .first();
 
         // 强制追加后缀
-        const suffix = '\n\n🚩素材来自：xiaohongshu-mcp';
-        const finalBody = body.includes('xiaohongshu-mcp') ? body : body + suffix;
+        // const suffix = '\n\n🚩素材来自：xiaohongshu-mcp';
+        // const finalBody = body.includes('xiaohongshu-mcp') ? body : body + suffix;
+        const finalBody = body;
 
         await humanClick(page, contentInput);
         await humanType(page, contentInput, finalBody.slice(0, 1000));

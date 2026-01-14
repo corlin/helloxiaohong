@@ -63,6 +63,17 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ success: false, error: '无效的时间格式' });
         }
 
+        // 检查该内容是否已有待执行或执行中的计划
+        const contentSchedules = await schedulesDb.getByContentId(contentId);
+        const activeSchedule = contentSchedules.find(s => ['pending', 'running'].includes(s.status));
+        if (activeSchedule) {
+            return res.status(409).json({
+                success: false,
+                error: '该内容已有待执行或执行中的计划',
+                data: { id: activeSchedule.id }
+            });
+        }
+
         // 检查是否与现有计划冲突（同一账号，间隔太近）
         const existingSchedules = await schedulesDb.getAll('pending');
         const conflicting = existingSchedules.find(s => {

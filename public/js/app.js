@@ -221,7 +221,15 @@ async function scheduleContent(contentId) {
         // 设置默认时间（5分钟后）
         const now = new Date();
         now.setMinutes(now.getMinutes() + 5);
-        const timeStr = now.toISOString().slice(0, 16);
+
+        // 构建本地时间字符串 YYYY-MM-DDTHH:mm
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const timeStr = `${year}-${month}-${day}T${hours}:${minutes}`;
+
         document.querySelector('input[name="scheduledAt"]').value = timeStr;
 
         openModal('create-schedule-modal');
