@@ -44,7 +44,7 @@ app.use('/api/logs', logsRouter);
 
 // 健康检查
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ status: 'ok', timestamp: new Date().toLocaleString('zh-CN', { hour12: false }) });
 });
 
 // SPA 回退

@@ -18,7 +18,8 @@ const customFormat = winston.format.printf(({ level, message, timestamp, ...meta
 const logger = winston.createLogger({
     level: config.nodeEnv === 'development' ? 'debug' : 'info',
     format: winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        // 使用本地时间格式 (zh-CN)
+        winston.format.timestamp({ format: () => new Date().toLocaleString('zh-CN', { hour12: false }) }),
         customFormat
     ),
     transports: [
@@ -26,7 +27,7 @@ const logger = winston.createLogger({
         new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
-                winston.format.timestamp({ format: 'HH:mm:ss' }),
+                winston.format.timestamp({ format: () => new Date().toLocaleString('zh-CN', { hour12: false }).split(' ')[1] }), // 只显示时间
                 customFormat
             ),
         }),
@@ -50,7 +51,7 @@ const logger = winston.createLogger({
 export const publishLogger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.timestamp({ format: () => new Date().toLocaleString('zh-CN', { hour12: false }) }),
         winston.format.json()
     ),
     transports: [
