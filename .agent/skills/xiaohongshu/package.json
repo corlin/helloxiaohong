@@ -1,0 +1,26 @@
+{
+  "name": "xiaohongshu-skill",
+  "version": "1.0.0",
+  "description": "小红书内容发布技能，提供检查登录状态和发布图文内容的功能",
+  "type": "module",
+  "main": "scripts/check_login_status.js",
+  "scripts": {
+    "check-login": "node scripts/check_login_status.js",
+    "publish": "node scripts/publish_content.js",
+    "test": "node scripts/test.js"
+  },
+  "keywords": [
+    "xiaohongshu",
+    "content",
+    "publish",
+    "automation"
+  ],
+  "author": "xiaohongshu-skill",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

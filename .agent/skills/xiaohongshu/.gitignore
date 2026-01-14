@@ -1,0 +1,4 @@
+node_modules
+.chromiumTemp
+.DS_Store
+package-lock.json

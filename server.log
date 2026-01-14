@@ -1,0 +1,92 @@
+
+> helloxiaohong@1.0.0 dev
+> node src/server.js
+
+00:34:27 [[32MINFO[39M] 🚀 服务器已启动: http://localhost:3000
+00:34:27 [[32MINFO[39M] 📅 调度器已启动
+✅ 数据库初始化完成
+00:34:27 [[32MINFO[39M] 调度器已启动
+00:35:00 [[34MDEBUG[39M] 调度器检查任务...
+00:35:00 [[34MDEBUG[39M] 没有待发布任务
+00:36:00 [[34MDEBUG[39M] 调度器检查任务...
+00:36:00 [[34MDEBUG[39M] 没有待发布任务
+00:36:37 [[32MINFO[39M] 文件上传成功 {"count":1}
+00:36:37 [[32MINFO[39M] 内容创建成功 {"contentId":20,"title":"秋日瀑布 Autumn Cascade"}
+00:36:40 [[32MINFO[39M] 发布计划创建成功 {"scheduleId":1000,"contentId":20,"accountId":4,"scheduledAt":"2026-01-15T00:41"}
+00:36:42 [[32MINFO[39M] 计划已设置为立即执行 {"scheduleId":1000}
+00:36:56 [[32MINFO[39M] 计划已设置为立即执行 {"scheduleId":1000}
+00:37:00 [[34MDEBUG[39M] 调度器检查任务...
+00:37:00 [[32MINFO[39M] 发现 1 个待发布任务
+00:37:00 [[32MINFO[39M] 开始处理发布任务 {"scheduleId":1000,"contentTitle":"秋日瀑布 Autumn Cascade","accountNickname":"小红书用户"}
+00:37:00 [[32MINFO[39M] 正在启动浏览器... {"headless":false}
+00:37:01 [[32MINFO[39M] 浏览器启动成功
+00:37:01 [[32MINFO[39M] 已加载 Cookie {"path":"/Users/corlin/2026/helloxiaohong/cookies/account_4.json"}
+00:37:02 [[32MINFO[39M] 正在打开发布页... {"accountId":4,"step":"navigate"}
+00:37:08 [[32MINFO[39M] 切换到图文模式 {"accountId":4,"step":"switch_tab"}
+00:37:08 [[32MINFO[39M] 查找 Tab "上传图文" 候选: 1 个
+00:37:08 [[32MINFO[39M] 尝试点击 Tab (第 1 次)
+00:37:10 [[32MINFO[39M] Tab 切换成功 (Active)
+00:37:12 [[32MINFO[39M] 上传图片... {"accountId":4,"step":"upload"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_CONNECTION_REFUSED"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_CONNECTION_REFUSED"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:12 [[34MDEBUG[39M] 页面控制台错误 {"text":"Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"}
+00:37:13 [[34MDEBUG[39M] 页面控制台错误 {"text":"ReferenceError: ratio is not defined\n    at https://fe-static.xhscdn.com/formula-static/ugc/public/resource/js/project-publish-vue.4ad11e2a.js:1:212704"}
+00:37:15 [[32MINFO[39M] 等待编辑器加载... {"accountId":4,"step":"verify"}
+00:37:15 [[32MINFO[39M] 填写内容... {"accountId":4,"step":"fill"}
+00:38:00 [[34MDEBUG[39M] 调度器检查任务...
+00:38:00 [[34MDEBUG[39M] 调度器正在运行中，跳过本次检查
+00:38:39 [[32MINFO[39M] 点击发布... {"accountId":4,"step":"publish"}
+00:38:39 [[34MDEBUG[39M] 截图已保存 {"path":"/Users/corlin/2026/helloxiaohong/logs/screenshots/before_publish_4_2026-01-14T16-38-39-262Z.png"}
+00:38:41 [[32MINFO[39M] 发布成功 {"accountId":4,"step":"success"}
+00:38:41 [[34MDEBUG[39M] 截图已保存 {"path":"/Users/corlin/2026/helloxiaohong/logs/screenshots/success_4_2026-01-14T16-38-41-152Z.png"}
+00:38:41 [[32MINFO[39M] Cookie 已保存 {"path":"/Users/corlin/2026/helloxiaohong/cookies/account_4.json","count":15}
+00:38:41 [[32MINFO[39M] 发布成功 {"scheduleId":1000}
+00:39:00 [[34MDEBUG[39M] 调度器检查任务...
+00:39:00 [[34MDEBUG[39M] 没有待发布任务
+00:40:00 [[34MDEBUG[39M] 调度器检查任务...
+00:40:00 [[34MDEBUG[39M] 没有待发布任务
+00:41:00 [[34MDEBUG[39M] 调度器检查任务...
+00:41:00 [[34MDEBUG[39M] 没有待发布任务
+00:42:00 [[34MDEBUG[39M] 调度器检查任务...
+00:42:00 [[34MDEBUG[39M] 没有待发布任务
+00:43:00 [[34MDEBUG[39M] 调度器检查任务...
+00:43:00 [[34MDEBUG[39M] 没有待发布任务
+00:44:00 [[34MDEBUG[39M] 调度器检查任务...
+00:44:00 [[34MDEBUG[39M] 没有待发布任务
+00:45:00 [[34MDEBUG[39M] 调度器检查任务...
+00:45:00 [[34MDEBUG[39M] 没有待发布任务
+00:46:00 [[34MDEBUG[39M] 调度器检查任务...
+00:46:00 [[34MDEBUG[39M] 没有待发布任务
+00:47:00 [[34MDEBUG[39M] 调度器检查任务...
+00:47:00 [[34MDEBUG[39M] 没有待发布任务
+00:48:00 [[34MDEBUG[39M] 调度器检查任务...
+00:48:00 [[34MDEBUG[39M] 没有待发布任务
+00:49:00 [[34MDEBUG[39M] 调度器检查任务...
+00:49:00 [[34MDEBUG[39M] 没有待发布任务
+00:50:00 [[34MDEBUG[39M] 调度器检查任务...
+00:50:00 [[34MDEBUG[39M] 没有待发布任务
+00:51:00 [[34MDEBUG[39M] 调度器检查任务...
+00:51:00 [[34MDEBUG[39M] 没有待发布任务
+00:52:00 [[34MDEBUG[39M] 调度器检查任务...
+00:52:00 [[34MDEBUG[39M] 没有待发布任务
+00:53:00 [[34MDEBUG[39M] 调度器检查任务...
+00:53:00 [[34MDEBUG[39M] 没有待发布任务
+00:54:00 [[34MDEBUG[39M] 调度器检查任务...
+00:54:00 [[34MDEBUG[39M] 没有待发布任务
+00:55:00 [[34MDEBUG[39M] 调度器检查任务...
+00:55:00 [[34MDEBUG[39M] 没有待发布任务
+00:56:00 [[34MDEBUG[39M] 调度器检查任务...
+00:56:00 [[34MDEBUG[39M] 没有待发布任务
+00:57:00 [[34MDEBUG[39M] 调度器检查任务...
+00:57:00 [[34MDEBUG[39M] 没有待发布任务
+00:58:00 [[34MDEBUG[39M] 调度器检查任务...
+00:58:00 [[34MDEBUG[39M] 没有待发布任务
+00:59:00 [[34MDEBUG[39M] 调度器检查任务...
+00:59:00 [[34MDEBUG[39M] 没有待发布任务
