@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小红书自动发布系统</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">📕</span>
+        <span class="logo-text">小红书发布</span>
+      </div>
+      <nav class="nav">
+        <a href="#" class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>仪表盘</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="contents">
+          <span class="nav-icon">📝</span>
+          <span>内容管理</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="schedules">
+          <span class="nav-icon">📅</span>
+          <span>发布计划</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="logs">
+          <span class="nav-icon">📜</span>
+          <span>发布日志</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="accounts">
+          <span class="nav-icon">👤</span>
+          <span>账号管理</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <!-- 仪表盘 -->
+      <section class="tab-content active" id="dashboard">
+        <header class="page-header">
+          <h1>仪表盘</h1>
+        </header>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👤</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-accounts">-</div>
+              <div class="stat-label">活跃账号</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-contents">-</div>
+              <div class="stat-label">待发布内容</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-pending">-</div>
+              <div class="stat-label">待执行计划</div>
+            </div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <div class="stat-value" id="stat-today">-</div>
+              <div class="stat-label">今日已发布</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="recent-logs">
+          <h2>最近日志</h2>
+          <div class="log-list" id="recent-logs"></div>
+        </div>
+      </section>
+
+      <!-- 内容管理 -->
+      <section class="tab-content" id="contents">
+        <header class="page-header">
+          <h1>内容管理</h1>
+          <button class="btn btn-primary" onclick="showCreateContent()">+ 新建内容</button>
+        </header>
+        <div class="content-list" id="content-list"></div>
+      </section>
+
+      <!-- 发布计划 -->
+      <section class="tab-content" id="schedules">
+        <header class="page-header">
+          <h1>发布计划</h1>
+        </header>
+        <div class="schedule-list" id="schedule-list"></div>
+      </section>
+
+      <!-- 发布日志 -->
+      <section class="tab-content" id="logs">
+        <header class="page-header">
+          <h1>发布日志</h1>
+        </header>
+        <div class="log-list full" id="log-list"></div>
+      </section>
+
+      <!-- 账号管理 -->
+      <section class="tab-content" id="accounts">
+        <header class="page-header">
+          <h1>账号管理</h1>
+          <button class="btn btn-primary" onclick="startLogin()">+ 添加账号</button>
+        </header>
+        <div class="account-list" id="account-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 创建内容模态框 -->
+  <div class="modal" id="create-content-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>创建内容</h2>
+        <button class="close-btn" onclick="closeModal('create-content-modal')">&times;</button>
+      </div>
+      <form id="create-content-form" onsubmit="submitContent(event)">
+        <div class="form-group">
+          <label>标题 *</label>
+          <input type="text" name="title" required maxlength="20" placeholder="最多20字">
+        </div>
+        <div class="form-group">
+          <label>正文</label>
+          <textarea name="body" rows="5" maxlength="1000" placeholder="最多1000字"></textarea>
+        </div>
+        <div class="form-group">
+          <label>内容类型</label>
+          <select name="type">
+            <option value="image">图文</option>
+            <option value="video">视频</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>上传媒体 *</label>
+          <div class="upload-area" id="upload-area">
+            <input type="file" id="media-input" multiple accept="image/*,video/*" onchange="handleFileSelect(event)">
+            <div class="upload-placeholder">
+              <span>📁</span>
+              <p>点击或拖拽上传图片/视频</p>
+            </div>
+            <div class="preview-list" id="preview-list"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>话题标签</label>
+          <input type="text" name="tags" placeholder="用逗号分隔，如: 美食,探店,分享">
+        </div>
+        <div class="form-group">
+          <label>位置</label>
+          <input type="text" name="location" placeholder="可选">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn" onclick="closeModal('create-content-modal')">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 创建计划模态框 -->
+  <div class="modal" id="create-schedule-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>创建发布计划</h2>
+        <button class="close-btn" onclick="closeModal('create-schedule-modal')">&times;</button>
+      </div>
+      <form id="create-schedule-form" onsubmit="submitSchedule(event)">
+        <input type="hidden" name="contentId" id="schedule-content-id">
+        <div class="form-group">
+          <label>选择账号 *</label>
+          <select name="accountId" id="schedule-account-select" required></select>
+        </div>
+        <div class="form-group">
+          <label>发布时间 *</label>
+          <input type="datetime-local" name="scheduledAt" required>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn" onclick="closeModal('create-schedule-modal')">取消</button>
+          <button type="submit" class="btn btn-primary">创建计划</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 扫码登录模态框 -->
+  <div class="modal" id="qrcode-modal">
+    <div class="modal-content small">
+      <div class="modal-header">
+        <h2>扫码登录</h2>
+        <button class="close-btn" onclick="closeModal('qrcode-modal')">&times;</button>
+      </div>
+      <div class="qrcode-container">
+        <div id="qrcode-loading">正在生成二维码...</div>
+        <img id="qrcode-image" src="" alt="二维码" style="display:none;">
+        <p id="qrcode-status">请使用小红书APP扫描二维码</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 通知 -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

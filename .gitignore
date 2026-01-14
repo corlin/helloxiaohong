@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Data & Storage
+data/
+cookies/
+uploads/
+logs/
+
+# Build
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright-report/
+test-results/
