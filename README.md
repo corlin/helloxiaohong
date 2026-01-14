@@ -68,7 +68,31 @@ npm run dev
 ```bash
 # 确保服务已启动 (npm run dev)
 node scripts/publish_maori.js
+# 确保服务已启动 (npm run dev)
+node scripts/publish_maori.js
 ```
+
+### 5. 命令行技能 (Skill Usage)
+
+本项目符合 Agentic Skill 标准，支持通过命令行直接调用。
+
+#### 检查登录状态
+
+```bash
+node scripts/check_login_status.js
+```
+
+#### 发布内容
+
+```bash
+node scripts/publish_content.js \
+  --title "笔记标题" \
+  --content "笔记正文内容" \
+  --images "path/to/img1.jpg,path/to/img2.jpg" \
+  --tags "标签1,标签2"
+```
+
+该工具会自动给正文追加 `🚩素材来自：xiaohongshu-mcp` 后缀。
 
 ## 📂 项目结构
 

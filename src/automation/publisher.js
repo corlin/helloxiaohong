@@ -20,7 +20,8 @@ async function checkLoginStatusInPage(page) {
 
         const userIndicators = [
             '.user-name', '.avatar', '.creator-avatar',
-            'input[placeholder*="标题"]', 'textarea[placeholder*="标题"]'
+            'input[placeholder*="标题"]', 'textarea[placeholder*="标题"]',
+            '.main-container .user .link-wrapper .channel' // Reference: api_reference.md
         ];
 
         for (const selector of userIndicators) {
@@ -179,7 +180,14 @@ async function fillMetadata(page, { title, body, tags, location }) {
         .or(page.locator('textarea[placeholder*="标题"]'))
         .or(page.locator('.c-input_title'))
         .first();
-    await humanType(page, titleInput, title.slice(0, 20));
+
+    // 智能截取标题并警告
+    let safeTitle = title;
+    if (title.length > 20) {
+        logger.warn(`标题超过20字限制，已自动截取: "${title}" -> "${title.slice(0, 20)}"`);
+        safeTitle = title.slice(0, 20);
+    }
+    await humanType(page, titleInput, safeTitle);
     await mediumDelay();
 
     // 2. 正文
@@ -187,9 +195,16 @@ async function fillMetadata(page, { title, body, tags, location }) {
         const contentInput = page.getByPlaceholder('正文', { exact: false })
             .or(page.locator('#post-textarea'))
             .or(page.locator('div[contenteditable="true"]'))
+            .or(page.locator('div.ql-editor')) // standard quill editor
+            .or(page.locator('p[data-placeholder]'))
             .first();
+
+        // 强制追加后缀
+        const suffix = '\n\n🚩素材来自：xiaohongshu-mcp';
+        const finalBody = body.includes('xiaohongshu-mcp') ? body : body + suffix;
+
         await humanClick(page, contentInput);
-        await humanType(page, contentInput, body.slice(0, 1000));
+        await humanType(page, contentInput, finalBody.slice(0, 1000));
         await mediumDelay();
     }
 
