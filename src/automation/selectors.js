@@ -6,16 +6,63 @@
 export const SELECTORS = {
     // 登录相关
     LOGIN: {
-        LOGIN_BUTTON: 'text=登录',
+        LOGIN_BUTTON: [
+            'text=登录',
+            'a:has-text("登录")',
+            'button:has-text("登录")',
+            '[class*="login"]'
+        ],
+
+        // 二维码相关
+        QR_CODE: [
+            'canvas',
+            'img[src*="qrcode"]',
+            '[class*="qr"] canvas',
+            '[class*="qrcode"] canvas',
+            '.login-qrcode canvas'
+        ],
+        QR_CODE_CONTAINER: [
+            '[class*="qr-box"]',
+            '[class*="qrcode-box"]',
+            '[class*="login-box"]',
+            '.login-container'
+        ],
+
+        // 加载状态
+        LOADING: [
+            'text=加载中',
+            'text=登录加载中',
+            '[class*="loading"]'
+        ],
+
+        // 用户信息
+        USER_INFO: {
+            NICKNAME: [
+                '.name-box', // Verified from debug HTML
+                '.account-name', // Verified from debug HTML
+                '.user-name',
+                '.user-info .name',
+            ],
+            AVATAR: [
+                'img.user_avatar', // Verified from debug HTML
+                '.avatar img',
+                '.user-info img',
+                '.header-container img.avatar',
+            ],
+            ID: [
+                '.user-id',
+                'text=/小红书账号[:：]/', // Verified "小红书账号: 6896912017"
+                'text=/小红书号[:：]/'
+            ]
+        },
         LOGGED_IN_INDICATORS: [
-            '.user-name',
-            '.avatar',
-            '.creator-avatar',
+            '.user-info',        // Confirmed in HTML
+            '.user_avatar',      // Confirmed in HTML
+            '.name-box',         // Confirmed in HTML
             'input[placeholder*="标题"]',
             'textarea[placeholder*="标题"]',
             '.main-container .user .link-wrapper .channel',
-            '.header-container .user-info', // New potential indicator
-            '#creator-header' // New potential indicator
+            '#creator-header'
         ]
     },
 

@@ -11,7 +11,76 @@ let ws = null;
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     loadDashboard();
+    setupUploadArea();
 });
+
+function setupUploadArea() {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('media-input');
+
+    if (!uploadArea || !fileInput) return;
+
+    // Handle click
+    uploadArea.addEventListener('click', (e) => {
+        // Prevent recursive triggering if clicking on input itself (though it's hidden)
+        // or if clicking remove button in preview
+        if (e.target !== fileInput && !e.target.closest('.remove-btn')) {
+            fileInput.click();
+        }
+    });
+
+    // Handle drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        uploadArea.classList.add('highlight-drag');
+        uploadArea.style.borderColor = 'var(--primary)';
+        uploadArea.style.background = 'rgba(255, 36, 66, 0.1)';
+    }
+
+    function unhighlight(e) {
+        uploadArea.classList.remove('highlight-drag');
+        uploadArea.style.borderColor = '';
+        uploadArea.style.background = '';
+    }
+
+    uploadArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    function handleFiles(files) {
+        const newFiles = Array.from(files).filter(file =>
+            file.type.startsWith('image/') || file.type.startsWith('video/')
+        );
+
+        if (newFiles.length === 0 && files.length > 0) {
+            showToast('仅支持图片和视频文件', 'error');
+            return;
+        }
+
+        uploadedFiles = uploadedFiles.concat(newFiles);
+        renderPreviews();
+    }
+}
 
 // Tab Switching
 function initTabs() {

@@ -10,57 +10,11 @@ import { mediumDelay, longDelay, simulateReading, shortDelay } from './human-lik
  * 支持扫码登录和 Cookie 持久化
  */
 
-// 小红书相关选择器（2024-2025 更新版 - 基于实际截图）
-const SELECTORS = {
-    // 已登录状态检测
-    loggedIn: [
-        '.sidebar-creator',
-        '.dyn-avatar',
-        '[class*="user-info"]',
-        '.user-name',
-        'a[href*="/publish"]',
-        '.header-user',
-    ],
+import { SELECTORS } from './selectors.js';
 
-    // 登录按钮（未登录时显示）
-    loginBtn: [
-        'text=登录',
-        'a:has-text("登录")',
-        'button:has-text("登录")',
-        '[class*="login"]',
-    ],
+// 小红书登录模块
+// 支持扫码登录和 Cookie 持久化
 
-    // 二维码相关（基于实际页面结构）
-    qrCode: [
-        'canvas',                         // 二维码通常是 canvas
-        'img[src*="qrcode"]',             // 图片形式的二维码
-        '[class*="qr"] canvas',
-        '[class*="qrcode"] canvas',
-        '.login-qrcode canvas',
-    ],
-
-    // 二维码容器/登录框
-    qrCodeContainer: [
-        '[class*="qr-box"]',
-        '[class*="qrcode-box"]',
-        '[class*="login-box"]',
-        '.login-container',
-    ],
-
-    // 加载状态
-    loading: [
-        'text=加载中',
-        'text=登录加载中',
-        '[class*="loading"]',
-    ],
-
-    // 用户昵称
-    nickname: [
-        '.user-name',
-        '.dyn-name',
-        '[class*="nickname"]',
-    ],
-};
 
 /**
  * 获取账号的 Cookie 文件路径
@@ -94,6 +48,11 @@ export function isCookieValid(cookiePath) {
  * 尝试多个选择器，返回第一个可见的
  */
 async function trySelectors(page, selectors, timeout = 3000) {
+    if (!selectors || typeof selectors[Symbol.iterator] !== 'function') {
+        logger.error('trySelectors received invalid selectors', { type: typeof selectors, value: selectors });
+        // Return null instead of throwing, or throw a more descriptive error
+        return null;
+    }
     for (const selector of selectors) {
         try {
             const locator = page.locator(selector).first();
@@ -115,7 +74,7 @@ async function trySelectors(page, selectors, timeout = 3000) {
 async function waitForLoadingToFinish(page, maxWait = 10000) {
     const startTime = Date.now();
     while (Date.now() - startTime < maxWait) {
-        const loading = await trySelectors(page, SELECTORS.loading, 500);
+        const loading = await trySelectors(page, SELECTORS.LOGIN.LOADING, 500);
         if (!loading) {
             return true;
         }
@@ -136,16 +95,19 @@ async function isPageLoggedIn(page) {
     }
 
     // 检查是否有登录按钮
-    const loginBtn = await trySelectors(page, SELECTORS.loginBtn, 1500);
+    const loginBtn = await trySelectors(page, SELECTORS.LOGIN.LOGIN_BUTTON, 1500);
     if (loginBtn) {
         return false;
     }
 
     // 检查已登录元素
-    const loggedInElement = await trySelectors(page, SELECTORS.loggedIn, 2000);
+    const loggedInElement = await trySelectors(page, SELECTORS.LOGIN.LOGGED_IN_INDICATORS, 2000);
     return loggedInElement !== null;
 }
 
+/**
+ * 获取用户信息
+ */
 /**
  * 获取用户信息
  */
@@ -153,30 +115,85 @@ async function getUserInfo(page) {
     try {
         await simulateReading(page, 1, 2);
 
-        let nickname = null;
-        for (const selector of SELECTORS.nickname) {
+        // 1. 获取昵称
+        let nickname = '小红书用户';
+        // 使用 selectors.js 中定义的 NICKNAME 选择器
+        for (const selector of SELECTORS.LOGIN.USER_INFO.NICKNAME) {
             try {
-                const text = await page.locator(selector).first().textContent({ timeout: 3000 });
-                if (text && text.trim()) {
-                    nickname = text.trim();
-                    break;
+                const el = page.locator(selector).first();
+                if (await el.isVisible()) {
+                    const text = await el.textContent();
+                    if (text && text.trim()) {
+                        nickname = text.trim();
+                        break;
+                    }
                 }
-            } catch (e) {
-                continue;
-            }
+            } catch (e) { continue; }
         }
 
-        const xhsId = await page.evaluate(() => {
-            if (window.__INITIAL_STATE__?.user?.userId) {
-                return window.__INITIAL_STATE__.user.userId;
-            }
+        // 2. 获取头像
+        let avatarUrl = null;
+        // 使用 selectors.js 中定义的 AVATAR 选择器
+        for (const selector of SELECTORS.LOGIN.USER_INFO.AVATAR) {
+            try {
+                const el = page.locator(selector).first();
+                if (await el.isVisible()) {
+                    avatarUrl = await el.getAttribute('src');
+                    if (avatarUrl) break;
+                }
+            } catch (e) { continue; }
+        }
+
+        // 3. 获取 ID (尝试多种方式)
+        let xhsId = await page.evaluate(() => {
+            try {
+                // 方式 A: 全局状态
+                if (window.__INITIAL_STATE__?.user?.userId) {
+                    return window.__INITIAL_STATE__.user.userId;
+                }
+                if (window.__INITIAL_STATE__?.user?.user_id) {
+                    return window.__INITIAL_STATE__.user.user_id;
+                }
+            } catch (e) { return null; }
             return null;
         }).catch(() => null);
 
+        // 方式 B: 页面文本 (根据 debug_user_info.html 分析得出: "小红书账号: 6896912017")
+        if (!xhsId) {
+            try {
+                // 尝试查找包含 "小红书账号" 或 "小红书号" 的文本元素
+                for (const selector of SELECTORS.LOGIN.USER_INFO.ID) {
+                    if (selector.startsWith('text=')) {
+                        const idText = await page.locator(selector).first().textContent().catch(() => null);
+                        if (idText) {
+                            // 匹配 "小红书账号: 123456" 或 "小红书号：123456"
+                            const match = idText.match(/小红书(账)?号[:：]\s*([a-zA-Z0-9_]+)/);
+                            if (match && match[2]) {
+                                xhsId = match[2];
+                                break;
+                            }
+                        }
+                    } else {
+                        // 常规选择器
+                        const el = page.locator(selector).first();
+                        if (await el.isVisible()) {
+                            const text = await el.textContent();
+                            if (text && text.trim()) {
+                                xhsId = text.trim();
+                            }
+                        }
+                    }
+                }
+            } catch (e) { logger.warn('ID scraping failed', { error: e.message }); }
+        }
+
+        // 如果实在找不到ID，尝试从头像 URL 中提取 (例如 spectrum/1040g2jo30vfcdt69lq00... 中的部分)
+        // 目前暂不实现，留作后续优化的 fallback
+
         return {
-            nickname: nickname || '小红书用户',
+            nickname,
             xhsId,
-            avatarUrl: null,
+            avatarUrl,
         };
     } catch (error) {
         logger.warn('获取用户信息失败', { error: error.message });
@@ -244,7 +261,7 @@ export async function login(accountId, onQrCode = null, onStatus = null) {
         }
 
         // 可能需要点击登录按钮
-        const loginBtn = await trySelectors(page, SELECTORS.loginBtn, 3000);
+        const loginBtn = await trySelectors(page, SELECTORS.LOGIN.LOGIN_BUTTON, 3000);
         if (loginBtn) {
             logger.info('点击登录按钮');
             await loginBtn.locator.click();
@@ -261,7 +278,7 @@ export async function login(accountId, onQrCode = null, onStatus = null) {
         // 查找二维码 - 等待更长时间
         let qrFound = false;
         for (let i = 0; i < 15; i++) {
-            const qrResult = await trySelectors(page, SELECTORS.qrCode, 2000);
+            const qrResult = await trySelectors(page, SELECTORS.LOGIN.QR_CODE, 2000);
             if (qrResult) {
                 qrFound = true;
                 logger.info('找到二维码', { selector: qrResult.selector, attempt: i + 1 });
@@ -318,7 +335,7 @@ export async function login(accountId, onQrCode = null, onStatus = null) {
 
             // 直接检查登录状态
             if (await isPageLoggedIn(page)) {
-                logger.info('扫码登录成功');
+                logger.info('检测到登录指示元素，登录成功');
                 if (onStatus) onStatus('success', '登录成功');
 
                 await longDelay();
@@ -328,6 +345,23 @@ export async function login(accountId, onQrCode = null, onStatus = null) {
 
                 return { success: true, userInfo, cookiePath };
             }
+
+            // 尝试使用 waitForSelector 提高检测成功率 (Inspired by xiaohongshu-skill)
+            try {
+                for (const selector of SELECTORS.LOGIN.LOGGED_IN_INDICATORS) {
+                    const el = await page.waitForSelector(selector, { state: 'visible', timeout: 500 }).catch(() => null);
+                    if (el) {
+                        logger.info('通过 waitForSelector 确认登录成功', { selector });
+                        if (onStatus) onStatus('success', '登录成功');
+
+                        await longDelay();
+                        await saveCookies(context, cookiePath);
+                        const userInfo = await getUserInfo(page);
+                        await context.close();
+                        return { success: true, userInfo, cookiePath };
+                    }
+                }
+            } catch (ignore) { }
 
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
