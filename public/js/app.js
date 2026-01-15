@@ -1,85 +1,170 @@
 /**
- * 小红书自动发布系统 - 前端应用
+ * HelloXiaohong - Frontend Application
  */
 
-// 全局状态
+// Global State
 let uploadedFiles = [];
 let currentAccountId = null;
 let ws = null;
 
-// 初始化
+// Initialization
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     loadDashboard();
 });
 
-// Tab 切换
+// Tab Switching
 function initTabs() {
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
+    const navItems = document.querySelectorAll('.nav-item, [data-tab-trigger]');
+
+    // Handle nav items
+    document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const tab = item.dataset.tab;
+            switchTab(item.dataset.tab);
+        });
+    });
 
-            // 更新导航激活状态
-            navItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-
-            // 切换内容
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(tab).classList.add('active');
-
-            // 加载对应数据
-            switch (tab) {
-                case 'dashboard': loadDashboard(); break;
-                case 'contents': loadContents(); break;
-                case 'schedules': loadSchedules(); break;
-                case 'logs': loadLogs(); break;
-                case 'accounts': loadAccounts(); break;
-            }
+    // Handle extra triggers (like "View All" buttons)
+    document.querySelectorAll('[data-tab-trigger]').forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchTab(trigger.dataset.tabTrigger);
         });
     });
 }
 
-// ==================== 仪表盘 ====================
+function switchTab(tabId) {
+    // Update nav active state
+    document.querySelectorAll('.nav-item').forEach(i => {
+        if (i.dataset.tab === tabId) {
+            i.classList.add('active');
+        } else {
+            i.classList.remove('active');
+        }
+    });
+
+    // Switch content with simple fade
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.style.opacity = '0';
+        setTimeout(() => {
+            c.classList.remove('active');
+            if (c.id === tabId) {
+                c.classList.add('active');
+                requestAnimationFrame(() => {
+                    c.style.opacity = '1';
+                });
+            }
+        }, 200);
+    });
+
+    // Make active immediately for better responsiveness (CSS transition handles opacity)
+    document.getElementById(tabId).classList.add('active');
+
+    // Load data
+    switch (tabId) {
+        case 'dashboard': loadDashboard(); break;
+        case 'contents': loadContents(); break;
+        case 'schedules': loadSchedules(); break;
+        case 'logs': loadLogs(); break;
+        case 'accounts': loadAccounts(); break;
+    }
+}
+
+// ==================== Dashboard ====================
+
+async function refreshDashboard() {
+    const btn = document.querySelector('.btn-icon i');
+    btn.classList.add('time-spin'); // Add a spinning animation class if you have one, or just rotate
+    btn.style.transition = 'transform 1s';
+    btn.style.transform = 'rotate(360deg)';
+
+    await loadDashboard();
+
+    setTimeout(() => {
+        btn.style.transform = 'rotate(0deg)';
+    }, 1000);
+}
 
 async function loadDashboard() {
     try {
         const { data: stats } = await logsApi.getStats();
 
-        document.getElementById('stat-accounts').textContent = stats.accounts.active;
-        document.getElementById('stat-contents').textContent = stats.contents.draft + stats.contents.scheduled;
-        document.getElementById('stat-pending').textContent = stats.schedules.pending;
-        document.getElementById('stat-today').textContent = stats.today.published;
+        animateCountUp('stat-accounts', stats.accounts.active || 0);
+        animateCountUp('stat-contents', (stats.contents.draft || 0) + (stats.contents.scheduled || 0));
+        animateCountUp('stat-pending', stats.schedules.pending || 0);
+        animateCountUp('stat-today', stats.today.published || 0);
 
-        // 加载最近日志
-        const { data: logs } = await logsApi.getAll(10);
+        // Load recent logs
+        const { data: logs } = await logsApi.getAll(5);
         renderRecentLogs(logs);
     } catch (error) {
         showToast(error.message, 'error');
     }
 }
 
+function animateCountUp(elementId, target) {
+    const element = document.getElementById(elementId);
+    const start = parseInt(element.innerText) || 0;
+    const duration = 1000;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Ease out quart
+        const ease = 1 - Math.pow(1 - progress, 4);
+
+        const current = Math.floor(start + (target - start) * ease);
+        element.innerText = current;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            element.innerText = target;
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+
 function renderRecentLogs(logs) {
     const container = document.getElementById('recent-logs');
 
     if (logs.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span>📭</span><p>暂无日志</p></div>';
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                <i class="ph ph-inbox" style="font-size: 32px; margin-bottom: 8px;"></i>
+                <p>暂无日志</p>
+            </div>`;
         return;
     }
 
-    container.innerHTML = logs.map(log => `
-    <div class="log-item ${log.status}">
-      <div class="log-item-header">
-        <span class="log-item-title">${log.content_title || '未知内容'}</span>
-        <span class="log-item-time">${formatTime(log.created_at)}</span>
-      </div>
-      <div class="log-item-message">${log.message || log.status}</div>
-    </div>
-  `).join('');
+    container.innerHTML = logs.map(log => {
+        let icon = 'ph-info';
+        if (log.status === 'success') icon = 'ph-check-circle';
+        if (log.status === 'failed') icon = 'ph-warning-circle';
+
+        return `
+        <div class="log-item ${log.status}">
+            <div class="log-item-header">
+                <i class="ph ${icon}" style="margin-right: 12px; font-size: 18px; color: var(--${log.status === 'failed' ? 'error' : 'success'})"></i>
+                <div class="log-item-content">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="log-item-title">${log.content_title || '未知内容'}</span>
+                        <span class="log-item-time">${formatTime(log.created_at)}</span>
+                    </div>
+                    <div class="log-item-message" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                        ${log.message || log.status}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `}).join('');
 }
 
-// ==================== 内容管理 ====================
+// ==================== Content Management ====================
 
 async function loadContents() {
     try {
@@ -94,25 +179,39 @@ function renderContents(contents) {
     const container = document.getElementById('content-list');
 
     if (contents.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span>📝</span><p>暂无内容，点击右上角创建</p></div>';
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i class="ph ph-files" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>暂无内容，点击右上角创建</p>
+            </div>`;
         return;
     }
 
     container.innerHTML = contents.map(content => `
-    <div class="list-item">
+    <div class="list-item slide-in">
       <div class="list-item-info">
         <div class="list-item-title">${content.title}</div>
         <div class="list-item-meta">
-          <span>${content.type === 'video' ? '🎬 视频' : '📷 图文'}</span>
-          <span>${content.media_paths.length} 个文件</span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <i class="ph ${content.type === 'video' ? 'ph-film-strip' : 'ph-image'}"></i>
+            ${content.type === 'video' ? '视频' : '图文'}
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <i class="ph ph-stack"></i>
+            ${content.media_paths.length} 个文件
+          </span>
           <span class="status status-${content.status}">${getStatusText(content.status)}</span>
         </div>
       </div>
       <div class="list-item-actions">
         ${content.status === 'draft' ? `
-          <button class="btn btn-small btn-primary" onclick="scheduleContent(${content.id})">排期发布</button>
+          <button class="btn btn-small btn-success" onclick="scheduleContent(${content.id})">
+            <i class="ph ph-calendar-plus"></i> 排期
+          </button>
         ` : ''}
-        <button class="btn btn-small btn-danger" onclick="deleteContent(${content.id})">删除</button>
+        <button class="btn btn-small btn-danger" onclick="deleteContent(${content.id})">
+            <i class="ph ph-trash"></i>
+        </button>
       </div>
     </div>
   `).join('');
@@ -142,7 +241,7 @@ function renderPreviews() {
                 ? `<video src="${url}" muted></video>`
                 : `<img src="${url}" alt="">`
             }
-        <button class="remove-btn" onclick="removeFile(${index})">×</button>
+        <button class="remove-btn" onclick="removeFile(${index})"><i class="ph ph-x"></i></button>
       </div>
     `;
     }).join('');
@@ -161,14 +260,19 @@ async function submitContent(event) {
         return;
     }
 
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="ph ph-spinner spinner-icon"></i> 保存中...';
+
     try {
-        // 上传文件
+        // Upload files
         const uploadResult = await contentsApi.upload(uploadedFiles);
         if (!uploadResult.success) {
             throw new Error(uploadResult.error);
         }
 
-        // 创建内容
+        // Create content
         const form = event.target;
         const formData = new FormData(form);
 
@@ -186,6 +290,9 @@ async function submitContent(event) {
         loadContents();
     } catch (error) {
         showToast(error.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 }
 
@@ -203,7 +310,6 @@ async function deleteContent(id) {
 
 async function scheduleContent(contentId) {
     try {
-        // 加载账号列表
         const { data: accounts } = await accountsApi.getAll();
         const activeAccounts = accounts.filter(a => a.status === 'active' && a.isLoggedIn);
 
@@ -212,17 +318,17 @@ async function scheduleContent(contentId) {
             return;
         }
 
-        // 设置表单
         document.getElementById('schedule-content-id').value = contentId;
         document.getElementById('schedule-account-select').innerHTML = activeAccounts.map(a =>
             `<option value="${a.id}">${a.nickname || `账号 ${a.id}`}</option>`
         ).join('');
 
-        // 设置默认时间（5分钟后）
+        // Default time: 5 minutes later
         const now = new Date();
         now.setMinutes(now.getMinutes() + 5);
 
-        // 构建本地时间字符串 YYYY-MM-DDTHH:mm
+        // Format for datetime-local: YYYY-MM-DDTHH:mm
+        // Note: This needs to be local time
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
@@ -260,7 +366,7 @@ async function submitSchedule(event) {
     }
 }
 
-// ==================== 发布计划 ====================
+// ==================== Schedules ====================
 
 async function loadSchedules() {
     try {
@@ -275,24 +381,38 @@ function renderSchedules(schedules) {
     const container = document.getElementById('schedule-list');
 
     if (schedules.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span>📅</span><p>暂无发布计划</p></div>';
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i class="ph ph-calendar-blank" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>暂无发布计划</p>
+            </div>`;
         return;
     }
 
     container.innerHTML = schedules.map(schedule => `
-    <div class="list-item">
+    <div class="list-item slide-in">
       <div class="list-item-info">
         <div class="list-item-title">${schedule.content_title || '未知内容'}</div>
         <div class="list-item-meta">
-          <span>👤 ${schedule.account_nickname || '未知账号'}</span>
-          <span>📅 ${formatTime(schedule.scheduled_at)}</span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <i class="ph ph-user-circle"></i>
+            ${schedule.account_nickname || '未知账号'}
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <i class="ph ph-clock"></i>
+            ${formatTime(schedule.scheduled_at)}
+          </span>
           <span class="status status-${schedule.status}">${getStatusText(schedule.status)}</span>
         </div>
       </div>
       <div class="list-item-actions">
         ${schedule.status === 'pending' ? `
-          <button class="btn btn-small btn-success" onclick="runSchedule(${schedule.id})">立即执行</button>
-          <button class="btn btn-small btn-danger" onclick="cancelSchedule(${schedule.id})">取消</button>
+          <button class="btn btn-small btn-success" onclick="runSchedule(${schedule.id})">
+            <i class="ph ph-play"></i> 执行
+          </button>
+          <button class="btn btn-small btn-danger" onclick="cancelSchedule(${schedule.id})">
+            <i class="ph ph-x"></i> 取消
+          </button>
         ` : ''}
       </div>
     </div>
@@ -321,7 +441,7 @@ async function cancelSchedule(id) {
     }
 }
 
-// ==================== 发布日志 ====================
+// ==================== Logs ====================
 
 async function loadLogs() {
     try {
@@ -336,29 +456,37 @@ function renderLogs(logs) {
     const container = document.getElementById('log-list');
 
     if (logs.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span>📜</span><p>暂无日志</p></div>';
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i class="ph ph-scroll" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>暂无日志</p>
+            </div>`;
         return;
     }
 
     container.innerHTML = logs.map(log => `
-    <div class="log-item ${log.status}">
+    <div class="log-item ${log.status} slide-in">
       <div class="log-item-header">
         <span class="log-item-title">
           ${log.content_title || '未知内容'} 
-          ${log.account_nickname ? `(${log.account_nickname})` : ''}
+          <span style="font-weight: normal; font-size: 12px; color: var(--text-secondary); margin-left: 8px;">
+            ${log.account_nickname ? `<i class="ph ph-user"></i> ${log.account_nickname}` : ''}
+          </span>
         </span>
         <span class="log-item-time">${formatTime(log.created_at)}</span>
       </div>
-      <div class="log-item-message">
-        <span class="status status-${log.status}">${log.status}</span>
-        ${log.message || ''}
-        ${log.note_url ? `<a href="${log.note_url}" target="_blank">查看笔记</a>` : ''}
+      <div class="log-item-message" style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="color: var(--text-secondary); font-size: 13px;">
+            <span class="status status-${log.status}" style="margin-right: 8px;">${log.status}</span>
+            ${log.message || ''}
+        </span>
+        ${log.note_url ? `<a href="${log.note_url}" target="_blank" class="btn btn-small btn-primary" style="text-decoration: none;"><i class="ph ph-arrow-square-out"></i> 查看笔记</a>` : ''}
       </div>
     </div>
   `).join('');
 }
 
-// ==================== 账号管理 ====================
+// ==================== Accounts ====================
 
 async function loadAccounts() {
     try {
@@ -373,23 +501,29 @@ function renderAccounts(accounts) {
     const container = document.getElementById('account-list');
 
     if (accounts.length === 0) {
-        container.innerHTML = '<div class="empty-state"><span>👤</span><p>暂无账号，点击右上角添加</p></div>';
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <i class="ph ph-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>暂无账号，点击右上角添加</p>
+            </div>`;
         return;
     }
 
     container.innerHTML = accounts.map(account => `
-    <div class="list-item">
+    <div class="list-item slide-in">
       <div class="list-item-info">
         <div class="list-item-title">${account.nickname || `账号 ${account.id}`}</div>
         <div class="list-item-meta">
-          <span>今日发布: ${account.daily_count || 0} 条</span>
+          <span><i class="ph ph-check-circle"></i> 今日发布: ${account.daily_count || 0} 条</span>
           <span class="status status-${account.isLoggedIn ? 'active' : 'expired'}">
             ${account.isLoggedIn ? '已登录' : '需要登录'}
           </span>
         </div>
       </div>
       <div class="list-item-actions">
-        <button class="btn btn-small btn-danger" onclick="deleteAccount(${account.id})">删除</button>
+        <button class="btn btn-small btn-danger" onclick="deleteAccount(${account.id})">
+            <i class="ph ph-trash"></i> 删除
+        </button>
       </div>
     </div>
   `).join('');
@@ -398,14 +532,15 @@ function renderAccounts(accounts) {
 async function startLogin() {
     try {
         openModal('qrcode-modal');
-        document.getElementById('qrcode-loading').style.display = 'block';
-        document.getElementById('qrcode-image').style.display = 'none';
+        const loading = document.getElementById('qrcode-loading');
+        const img = document.getElementById('qrcode-image');
+        loading.style.display = 'block';
+        img.style.display = 'none';
         document.getElementById('qrcode-status').textContent = '正在生成二维码...';
 
         const { data } = await accountsApi.login();
         currentAccountId = data.accountId;
 
-        // 建立 WebSocket 连接
         connectWebSocket(currentAccountId);
     } catch (error) {
         showToast(error.message, 'error');
@@ -423,8 +558,10 @@ function connectWebSocket(accountId) {
         switch (data.type) {
             case 'qrcode':
                 document.getElementById('qrcode-loading').style.display = 'none';
-                document.getElementById('qrcode-image').src = data.data;
-                document.getElementById('qrcode-image').style.display = 'block';
+                const img = document.getElementById('qrcode-image');
+                img.src = data.data;
+                img.style.display = 'block';
+                img.classList.add('scale-in');
                 document.getElementById('qrcode-status').textContent = '请使用小红书APP扫描二维码';
                 break;
 
@@ -464,10 +601,16 @@ async function deleteAccount(id) {
     }
 }
 
-// ==================== 工具函数 ====================
+// ==================== Utilities ====================
 
 function openModal(id) {
-    document.getElementById(id).classList.add('show');
+    const modal = document.getElementById(id);
+    modal.classList.add('show');
+    // Animate child modal
+    const content = modal.querySelector('.modal');
+    content.classList.remove('scale-in');
+    void content.offsetWidth; // trigger reflow
+    content.classList.add('scale-in');
 }
 
 function closeModal(id) {
@@ -478,11 +621,21 @@ function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = message;
+
+    let icon = 'ph-check-circle';
+    if (type === 'error') icon = 'ph-warning-circle';
+
+    toast.innerHTML = `
+        <i class="ph ${icon}" style="font-size: 20px; color: var(--${type})"></i>
+        <span>${message}</span>
+    `;
+
     container.appendChild(toast);
 
     setTimeout(() => {
-        toast.remove();
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
