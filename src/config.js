@@ -9,6 +9,7 @@ export const config = {
     // 服务配置
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
+    apiKey: process.env.API_KEY || 'dev-secret-key',
 
     // 路径配置
     rootDir: ROOT_DIR,
@@ -33,6 +34,7 @@ export const config = {
         dailyLimit: parseInt(process.env.DAILY_LIMIT || '5', 10),
         minIntervalMinutes: 0, // 两次发布最小间隔 (分钟)
         maxRetries: 3,
+        maxConcurrentTasks: parseInt(process.env.MAX_CONCURRENT_TASKS || '2', 10),
     },
 
     // 人类行为模拟

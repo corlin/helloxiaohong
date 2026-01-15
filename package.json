@@ -7,8 +7,9 @@
     "scripts": {
         "dev": "node src/server.js",
         "db:init": "node src/database/init.js",
-        "test:login": "node src/scripts/test-login.js",
-        "test:publish": "node src/scripts/test-publish.js"
+        "db:init": "node src/database/init.js",
+        "check:login": "node scripts/cli.js check-login",
+        "cli": "node scripts/cli.js"
     },
     "dependencies": {
         "playwright": "^1.40.0",

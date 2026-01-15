@@ -3,11 +3,13 @@
  */
 
 const API_BASE = '/api';
+const API_KEY = 'dev-secret-key'; // Default key for dev environment
 
 async function request(url, options = {}) {
     const response = await fetch(`${API_BASE}${url}`, {
         headers: {
             'Content-Type': 'application/json',
+            'X-API-Key': API_KEY,
             ...options.headers,
         },
         ...options,
@@ -46,6 +48,9 @@ const contentsApi = {
         const response = await fetch(`${API_BASE}/contents/upload`, {
             method: 'POST',
             body: formData,
+            headers: {
+                'X-API-Key': API_KEY,
+            },
         });
         return response.json();
     },

@@ -7,12 +7,14 @@ import config from './config.js';
 import logger from './utils/logger.js';
 import { initDatabase } from './database/index.js';
 import { startScheduler } from './scheduler/index.js';
+import { authMiddleware } from './api/middleware/auth.js';
 
 // API 路由
 import accountsRouter, { setWsClient } from './api/routes/accounts.js';
 import contentsRouter from './api/routes/contents.js';
 import schedulesRouter from './api/routes/schedules.js';
 import logsRouter from './api/routes/logs.js';
+import aiRouter from './api/routes/ai.js';
 
 // 确保必要目录存在
 const dirs = [config.dataDir, config.uploadsDir, config.cookiesDir, config.logsDir];
@@ -36,11 +38,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(config.publicDir));
 app.use('/uploads', express.static(config.uploadsDir));
 
+// 鉴权中间件
+app.use(authMiddleware);
+
 // API 路由
 app.use('/api/accounts', accountsRouter);
 app.use('/api/contents', contentsRouter);
 app.use('/api/schedules', schedulesRouter);
 app.use('/api/logs', logsRouter);
+app.use('/api/ai', aiRouter);
 
 // 健康检查
 app.get('/api/health', (req, res) => {
