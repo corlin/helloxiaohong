@@ -52,28 +52,15 @@ async function processSchedule(schedule) {
         // 检查日发布限制
         const currentAccount = await accountsDb.getById(account_id);
 
-        // 惰性重置：如果最后发布日期不是今天，重置计数
-        const today = getLocalDateString();
-        if (currentAccount.last_publish_date !== today) {
-            logger.info('检测到跨天，重置日发布计数', {
-                accountId: account_id,
-                oldDate: currentAccount.last_publish_date,
-                today: today
-            });
-            await accountsDb.update(account_id, {
-                daily_count: 0,
-                last_publish_date: today  // 更新为今天，避免重复重置
-            });
-            currentAccount.daily_count = 0;
-            currentAccount.last_publish_date = today;
-        }
+        // 获取今日已发布成功次数 (动态统计，更准确)
+        const currentDailyCount = await schedulesDb.getDailyPublishCount(account_id);
 
         // 动态获取每日限制
         const limitSetting = await settingsDb.get('daily_limit');
         const dailyLimit = limitSetting ? parseInt(limitSetting) : config.publish.dailyLimit;
 
-        if (currentAccount.daily_count >= dailyLimit) {
-            logger.warn('超过日发布限制', { accountId: account_id, dailyCount: currentAccount.daily_count, limit: dailyLimit });
+        if (currentDailyCount >= dailyLimit) {
+            logger.warn('超过日发布限制', { accountId: account_id, dailyCount: currentDailyCount, limit: dailyLimit });
             await schedulesDb.update(id, {
                 status: 'failed',
                 errorMessage: `超过日发布限制 (${dailyLimit})`,
@@ -81,7 +68,7 @@ async function processSchedule(schedule) {
             await logsDb.create({
                 scheduleId: id,
                 status: 'failed',
-                message: `超过日发布限制 (${currentAccount.daily_count}/${dailyLimit})`,
+                message: `超过日发布限制 (今日已发 ${currentDailyCount}/${dailyLimit})`,
             });
             return;
         }

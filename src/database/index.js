@@ -378,6 +378,27 @@ export const schedulesDb = {
         database.run('DELETE FROM schedules WHERE id = ?', [id]);
         await saveDb();
     },
+
+    async deleteByContentId(contentId) {
+        const database = await getDb();
+        database.run('DELETE FROM schedules WHERE content_id = ?', [contentId]);
+        await saveDb();
+    },
+
+    async getDailyPublishCount(accountId) {
+        const database = await getDb();
+        // 统计指定账号在当天的成功发布次数
+        // 使用 sqlite 的 date('now', 'localtime') 来匹配本地日期
+        const result = database.exec(`
+            SELECT COUNT(*) 
+            FROM schedules 
+            WHERE account_id = ? 
+              AND status = 'completed' 
+              AND date(updated_at, 'localtime') = date('now', 'localtime')
+        `, [accountId]);
+
+        return result.length > 0 ? result[0].values[0][0] : 0;
+    },
 };
 
 // ==================== 发布日志相关 ====================

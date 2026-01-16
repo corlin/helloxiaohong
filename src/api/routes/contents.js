@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { contentsDb } from '../../database/index.js';
+import { contentsDb, schedulesDb } from '../../database/index.js';
 import config from '../../config.js';
 import logger from '../../utils/logger.js';
 
@@ -178,6 +178,9 @@ router.delete('/:id', async (req, res) => {
                 fs.unlinkSync(fullPath);
             }
         }
+
+        // 删除关联的发布计划
+        await schedulesDb.deleteByContentId(contentId);
 
         await contentsDb.delete(contentId);
 
