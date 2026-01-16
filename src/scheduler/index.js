@@ -1,9 +1,10 @@
 import cron from 'node-cron';
 import config from '../config.js';
 import logger from '../utils/logger.js';
-import { schedulesDb, accountsDb, contentsDb, logsDb } from '../database/index.js';
+import { schedulesDb, accountsDb, contentsDb, logsDb, settingsDb } from '../database/index.js';
 import { publish } from '../automation/publisher.js';
 import TaskQueue from '../utils/taskQueue.js';
+import { getLocalDateString } from '../utils/time.js';
 
 /**
  * 任务调度器
@@ -50,16 +51,37 @@ async function processSchedule(schedule) {
 
         // 检查日发布限制
         const currentAccount = await accountsDb.getById(account_id);
-        if (currentAccount.daily_count >= config.publish.dailyLimit) {
-            logger.warn('超过日发布限制', { accountId: account_id, dailyCount: currentAccount.daily_count });
+
+        // 惰性重置：如果最后发布日期不是今天，重置计数
+        const today = getLocalDateString();
+        if (currentAccount.last_publish_date !== today) {
+            logger.info('检测到跨天，重置日发布计数', {
+                accountId: account_id,
+                oldDate: currentAccount.last_publish_date,
+                today: today
+            });
+            await accountsDb.update(account_id, {
+                daily_count: 0,
+                last_publish_date: today  // 更新为今天，避免重复重置
+            });
+            currentAccount.daily_count = 0;
+            currentAccount.last_publish_date = today;
+        }
+
+        // 动态获取每日限制
+        const limitSetting = await settingsDb.get('daily_limit');
+        const dailyLimit = limitSetting ? parseInt(limitSetting) : config.publish.dailyLimit;
+
+        if (currentAccount.daily_count >= dailyLimit) {
+            logger.warn('超过日发布限制', { accountId: account_id, dailyCount: currentAccount.daily_count, limit: dailyLimit });
             await schedulesDb.update(id, {
                 status: 'failed',
-                errorMessage: '超过日发布限制',
+                errorMessage: `超过日发布限制 (${dailyLimit})`,
             });
             await logsDb.create({
                 scheduleId: id,
                 status: 'failed',
-                message: `超过日发布限制 (${currentAccount.daily_count}/${config.publish.dailyLimit})`,
+                message: `超过日发布限制 (${currentAccount.daily_count}/${dailyLimit})`,
             });
             return;
         }
@@ -225,10 +247,11 @@ export async function startScheduler() {
         await checkAndExecute();
     });
 
-    // 每天零点重置日发布计数
+    // 每天零点重置日发布计数，并尝试重试因限制失败的任务
     cron.schedule('0 0 * * *', async () => {
-        logger.info('重置日发布计数');
+        logger.info('执行每日重置任务...');
         await accountsDb.resetDailyCount();
+        await schedulesDb.resetDailyLimitFailures();
     });
 
     logger.info(`调度器已启动 (并发数: ${config.publish.maxConcurrentTasks})`);

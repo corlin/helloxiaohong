@@ -149,19 +149,58 @@ router.post('/:id/run', async (req, res) => {
             return res.status(404).json({ success: false, error: '计划不存在' });
         }
 
-        if (schedule.status !== 'pending') {
-            return res.status(400).json({ success: false, error: '只能执行待发布状态的计划' });
+        // 允许重试失败的任务
+        if (schedule.status !== 'pending' && schedule.status !== 'failed') {
+            return res.status(400).json({ success: false, error: '只能执行待发布或失败状态的计划' });
         }
 
         // 更新为立即执行
         await schedulesDb.update(scheduleId, {
-            scheduledAt: new Date().toISOString()
+            scheduledAt: new Date().toISOString(),
+            status: 'pending', // 确保状态重置为 pending
+            errorMessage: null, // 清除错误信息
+            retryCount: 0      // 重置重试次数
         });
 
         logger.info('计划已设置为立即执行', { scheduleId });
         res.json({ success: true, message: '已加入执行队列' });
     } catch (error) {
         logger.error('执行计划失败', { error: error.message });
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * 重试失败的计划
+ */
+router.post('/:id/retry', async (req, res) => {
+    try {
+        const scheduleId = parseInt(req.params.id);
+        const schedule = await schedulesDb.getById(scheduleId);
+
+        if (!schedule) {
+            return res.status(404).json({ success: false, error: '计划不存在' });
+        }
+
+        if (schedule.status !== 'failed' && schedule.status !== 'cancelled') {
+            return res.status(400).json({ success: false, error: '只能重试失败或取消的计划' });
+        }
+
+        // 重置状态为 pending，保持原有计划时间（如果是过去的就立即执行，如果是未来的就等待）
+        // 这里策略是：既然用户点击重试，通常希望立即尝试，或者按原计划（如果原计划在未来）
+        // 对于失败的任务，原计划时间肯定是过去。所以重试等于立即执行。
+
+        await schedulesDb.update(scheduleId, {
+            status: 'pending',
+            retryCount: 0,
+            errorMessage: null,
+            scheduledAt: new Date().toISOString() // 重置为当前时间，立即重试
+        });
+
+        logger.info('计划已重置并重试', { scheduleId });
+        res.json({ success: true, message: '已加入重试队列' });
+    } catch (error) {
+        logger.error('重试计划失败', { error: error.message });
         res.status(500).json({ success: false, error: error.message });
     }
 });

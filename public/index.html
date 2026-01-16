@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HelloXiaohong | 智能发布系统</title>
-  
+
   <!-- Google Fonts: Outfit (Modern Sans) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
+
   <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Material Icons (Fallback) -->
@@ -18,6 +19,7 @@
 
   <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
   <div class="app-background"></div>
   <div class="app">
@@ -29,7 +31,7 @@
         </div>
         <span class="logo-text">Hello<span class="highlight">Xiaohong</span></span>
       </div>
-      
+
       <nav class="nav">
         <a href="#" class="nav-item active" data-tab="dashboard">
           <i class="ph ph-squares-four nav-icon"></i>
@@ -74,10 +76,11 @@
             <p class="subtitle">欢迎回来，查看您的发布概览</p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-icon glass" onclick="refreshDashboard()"><i class="ph ph-arrows-clockwise"></i></button>
+            <button class="btn btn-icon glass" onclick="refreshDashboard()"><i
+                class="ph ph-arrows-clockwise"></i></button>
           </div>
         </header>
-        
+
         <div class="stats-grid slide-in delay-1">
           <div class="stat-card glass">
             <div class="stat-icon-wrapper accounts">
@@ -116,7 +119,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="recent-logs glass slide-in delay-2">
           <div class="section-header">
             <h2>最近日志</h2>
@@ -138,7 +141,7 @@
           </button>
         </header>
         <div class="content-list-wrapper glass slide-in delay-1">
-            <div class="content-list" id="content-list"></div>
+          <div class="content-list" id="content-list"></div>
         </div>
       </section>
 
@@ -151,7 +154,7 @@
           </div>
         </header>
         <div class="schedule-list-wrapper glass slide-in delay-1">
-            <div class="schedule-list" id="schedule-list"></div>
+          <div class="schedule-list" id="schedule-list"></div>
         </div>
       </section>
 
@@ -164,7 +167,7 @@
           </div>
         </header>
         <div class="log-list-wrapper glass slide-in delay-1">
-            <div class="log-list full" id="log-list"></div>
+          <div class="log-list full" id="log-list"></div>
         </div>
       </section>
 
@@ -180,7 +183,7 @@
           </button>
         </header>
         <div class="account-list-wrapper glass slide-in delay-1">
-            <div class="account-list" id="account-list"></div>
+          <div class="account-list" id="account-list"></div>
         </div>
       </section>
     </main>
@@ -190,52 +193,52 @@
   <div class="modal-overlay" id="create-content-modal">
     <div class="modal glass scale-in">
       <div class="modal-header">
-        <h2>创建内容</h2>
+        <h2 id="modal-title">创建内容</h2>
         <button class="close-btn" onclick="closeModal('create-content-modal')"><i class="ph ph-x"></i></button>
       </div>
       <form id="create-content-form" onsubmit="submitContent(event)">
         <div class="form-grid">
-            <div class="form-group full">
+          <div class="form-group full">
             <label>标题 <span class="required">*</span></label>
             <input type="text" name="title" required maxlength="20" placeholder="吸引人的标题 (最多20字)" class="glass-input">
-            </div>
-            <div class="form-group full">
+          </div>
+          <div class="form-group full">
             <label>正文</label>
             <textarea name="body" rows="5" maxlength="1000" placeholder="分享您的精彩内容..." class="glass-input"></textarea>
-            </div>
-            <div class="form-group">
+          </div>
+          <div class="form-group">
             <label>内容类型</label>
             <div class="select-wrapper">
-                <select name="type" class="glass-input">
+              <select name="type" class="glass-input">
                 <option value="image">📷 图文笔记</option>
                 <option value="video">🎬 视频笔记</option>
-                </select>
-                <i class="ph ph-caret-down select-arrow"></i>
+              </select>
+              <i class="ph ph-caret-down select-arrow"></i>
             </div>
-            </div>
-            <div class="form-group">
-                <label>话题标签</label>
-                <input type="text" name="tags" placeholder="例如: 美食, 探店" class="glass-input">
-            </div>
-            <div class="form-group full">
+          </div>
+          <div class="form-group">
+            <label>话题标签</label>
+            <input type="text" name="tags" placeholder="例如: 美食, 探店" class="glass-input">
+          </div>
+          <div class="form-group full">
             <label>上传媒体 <span class="required">*</span></label>
             <div class="upload-area glass-input" id="upload-area">
-                <input type="file" id="media-input" multiple accept="image/*,video/*" onchange="handleFileSelect(event)">
-                <div class="upload-placeholder">
+              <input type="file" id="media-input" multiple accept="image/*,video/*" onchange="handleFileSelect(event)">
+              <div class="upload-placeholder">
                 <i class="ph ph-cloud-arrow-up"></i>
                 <p>点击或拖拽上传图片/视频</p>
                 <span class="upload-hint">支持 JPG, PNG, MP4</span>
-                </div>
-                <div class="preview-list" id="preview-list"></div>
+              </div>
+              <div class="preview-list" id="preview-list"></div>
             </div>
-            </div>
-            <div class="form-group full">
+          </div>
+          <div class="form-group full">
             <label>位置</label>
             <div class="input-with-icon">
-                <i class="ph ph-map-pin input-icon"></i>
-                <input type="text" name="location" placeholder="添加地点 (可选)" class="glass-input">
+              <i class="ph ph-map-pin input-icon"></i>
+              <input type="text" name="location" placeholder="添加地点 (可选)" class="glass-input">
             </div>
-            </div>
+          </div>
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="closeModal('create-content-modal')">取消</button>
@@ -282,8 +285,8 @@
       </div>
       <div class="qrcode-container">
         <div id="qrcode-loading">
-            <div class="spinner"></div>
-            <p>正在生成二维码...</p>
+          <div class="spinner"></div>
+          <p>正在生成二维码...</p>
         </div>
         <img id="qrcode-image" src="" alt="二维码" style="display:none;" class="qrcode-img">
         <p id="qrcode-status">请使用小红书APP扫描二维码</p>
@@ -297,4 +300,5 @@
   <script src="/js/api.js"></script>
   <script src="/js/app.js"></script>
 </body>
+
 </html>

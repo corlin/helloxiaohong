@@ -114,12 +114,15 @@ helloxiaohong/
 └── public/             # 静态资源 (前端 Dashboard)
 ```
 
-## 📝 API 概览
+## 📝 API 文档
 
-- `GET /api/accounts`: 获取账号列表
-- `POST /api/contents`: 创建新内容
-- `POST /api/schedules`: 创建发布计划
-- `POST /api/schedules/run-now`: 立即触发调度器检查
+详细的 API 接口文档请参考 [API.md](./API.md)。
+
+主要模块包括：
+- **Accounts**: 账号管理与登录
+- **Contents**: 内容增删改查与媒体上传
+- **Schedules**: 发布计划管理、立即执行与重试
+- **Logs**: 系统日志与统计数据
 
 ## 🤝 贡献
 

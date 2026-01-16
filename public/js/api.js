@@ -61,8 +61,10 @@ const schedulesApi = {
     getAll: (status) => request(`/schedules${status ? `?status=${status}` : ''}`),
     getById: (id) => request(`/schedules/${id}`),
     create: (data) => request('/schedules', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => request(`/schedules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => request(`/schedules/${id}`, { method: 'DELETE' }),
     run: (id) => request(`/schedules/${id}/run`, { method: 'POST' }),
+    retry: (id) => request(`/schedules/${id}/retry`, { method: 'POST' }),
 };
 
 // 日志 API

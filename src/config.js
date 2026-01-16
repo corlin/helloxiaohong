@@ -7,6 +7,7 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 
 export const config = {
     // 服务配置
+    host: process.env.HOST || '0.0.0.0',
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
     apiKey: process.env.API_KEY || 'dev-secret-key',

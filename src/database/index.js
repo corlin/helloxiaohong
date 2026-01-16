@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import config from '../config.js';
+import logger from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -151,7 +152,7 @@ export const accountsDb = {
         database.run(`
       UPDATE accounts 
       SET daily_count = daily_count + 1, 
-          last_publish_date = date('now'),
+          last_publish_date = date('now', 'localtime'),
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [id]);
@@ -350,6 +351,19 @@ export const schedulesDb = {
         `);
         const rowsModified = database.getRowsModified();
         await saveDb();
+        return rowsModified;
+    },
+
+    async resetDailyLimitFailures() {
+        const database = await getDb();
+        const result = database.run(`
+            UPDATE schedules 
+            SET status = 'pending', retry_count = 0, error_message = NULL, scheduled_at = CURRENT_TIMESTAMP
+            WHERE status = 'failed' AND error_message LIKE '%发布限制%'
+        `);
+        const rowsModified = database.getRowsModified();
+        await saveDb();
+        logger.info(`已重置 ${rowsModified} 个因发布限制失败的任务`);
         return rowsModified;
     },
 

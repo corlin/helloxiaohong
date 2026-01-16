@@ -4,6 +4,8 @@
 
 // Global State
 let uploadedFiles = [];
+let existingMediaPaths = []; // For editing: stores paths of already uploaded files
+let currentEditingId = null; // For editing: stores ID of content being edited
 let currentAccountId = null;
 let ws = null;
 
@@ -273,8 +275,13 @@ function renderContents(contents) {
         </div>
       </div>
       <div class="list-item-actions">
+        ${['draft', 'scheduled', 'failed'].includes(content.status) ? `
+          <button class="btn btn-small btn-primary" onclick="editContent(${content.id})" title="编辑">
+            <i class="ph ph-pencil-simple"></i>
+          </button>
+        ` : ''}
         ${content.status === 'draft' ? `
-          <button class="btn btn-small btn-success" onclick="scheduleContent(${content.id})">
+          <button class="btn btn-small btn-success" onclick="scheduleContent(${content.id})" title="发布排期">
             <i class="ph ph-calendar-plus"></i> 排期
           </button>
         ` : ''}
@@ -288,9 +295,36 @@ function renderContents(contents) {
 
 function showCreateContent() {
     uploadedFiles = [];
+    existingMediaPaths = [];
+    currentEditingId = null;
+    document.getElementById('modal-title').textContent = '创建内容';
     document.getElementById('create-content-form').reset();
     document.getElementById('preview-list').innerHTML = '';
     openModal('create-content-modal');
+}
+
+async function editContent(id) {
+    try {
+        const { data: content } = await contentsApi.getById(id);
+
+        currentEditingId = id;
+        uploadedFiles = [];
+        existingMediaPaths = content.media_paths || [];
+
+        // Populate form
+        const form = document.getElementById('create-content-form');
+        form.querySelector('[name="title"]').value = content.title;
+        form.querySelector('[name="body"]').value = content.body || '';
+        form.querySelector('[name="type"]').value = content.type;
+        form.querySelector('[name="tags"]').value = (content.tags || []).join(', ');
+        form.querySelector('[name="location"]').value = content.location || '';
+
+        document.getElementById('modal-title').textContent = '编辑内容';
+        renderPreviews();
+        openModal('create-content-modal');
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
 }
 
 function handleFileSelect(event) {
@@ -301,19 +335,62 @@ function handleFileSelect(event) {
 
 function renderPreviews() {
     const container = document.getElementById('preview-list');
-    container.innerHTML = uploadedFiles.map((file, index) => {
-        const url = URL.createObjectURL(file);
-        const isVideo = file.type.startsWith('video/');
-        return `
-      <div class="preview-item">
-        ${isVideo
-                ? `<video src="${url}" muted></video>`
-                : `<img src="${url}" alt="">`
-            }
-        <button class="remove-btn" onclick="removeFile(${index})"><i class="ph ph-x"></i></button>
-      </div>
-    `;
-    }).join('');
+
+    // Check if we have any files (uploaded or existing)
+    if (uploadedFiles.length === 0 && existingMediaPaths.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    // Render existing files
+    if (existingMediaPaths.length > 0) {
+        html += existingMediaPaths.map((path, index) => {
+            // Assume uploads/ prefix if relative, or construct full URL
+            // Since we serve uploads static folder, assume /uploads/filename
+            const url = path.startsWith('http') ? path : `/uploads/${path.split('/').pop()}`;
+            // Simple heuristic for video based on extension, or we need type from DB. 
+            // DB doesn't store per-file type easily, but we know content type.
+            // Let's assume common extensions.
+            const isVideo = /\.(mp4|mov|avi|mkv)$/i.test(path);
+
+            return `
+              <div class="preview-item existing-file">
+                ${isVideo
+                    ? `<video src="${url}" muted></video>`
+                    : `<img src="${url}" alt="">`
+                }
+                <div class="existing-badge">已上传</div>
+                <button class="remove-btn" onclick="removeExistingFile(${index})"><i class="ph ph-x"></i></button>
+              </div>
+            `;
+        }).join('');
+    }
+
+    // Render new uploaded files
+    if (uploadedFiles.length > 0) {
+        html += uploadedFiles.map((file, index) => {
+            const url = URL.createObjectURL(file);
+            const isVideo = file.type.startsWith('video/');
+            return `
+          <div class="preview-item">
+            ${isVideo
+                    ? `<video src="${url}" muted></video>`
+                    : `<img src="${url}" alt="">`
+                }
+            <button class="remove-btn" onclick="removeFile(${index})"><i class="ph ph-x"></i></button>
+          </div>
+        `;
+        }).join('');
+    }
+
+    container.innerHTML = html;
+}
+
+function removeExistingFile(index) {
+    existingMediaPaths.splice(index, 1);
+    renderPreviews();
 }
 
 function removeFile(index) {
@@ -324,7 +401,7 @@ function removeFile(index) {
 async function submitContent(event) {
     event.preventDefault();
 
-    if (uploadedFiles.length === 0) {
+    if (uploadedFiles.length === 0 && existingMediaPaths.length === 0) {
         showToast('请上传至少一个文件', 'error');
         return;
     }
@@ -335,26 +412,39 @@ async function submitContent(event) {
     submitBtn.innerHTML = '<i class="ph ph-spinner spinner-icon"></i> 保存中...';
 
     try {
-        // Upload files
-        const uploadResult = await contentsApi.upload(uploadedFiles);
-        if (!uploadResult.success) {
-            throw new Error(uploadResult.error);
+        // Upload new files if any
+        let newMediaPaths = [];
+        if (uploadedFiles.length > 0) {
+            const uploadResult = await contentsApi.upload(uploadedFiles);
+            if (!uploadResult.success) {
+                throw new Error(uploadResult.error);
+            }
+            newMediaPaths = uploadResult.data.paths;
         }
 
-        // Create content
+        // Combine existing and new paths
+        const finalMediaPaths = [...existingMediaPaths, ...newMediaPaths];
+
+        // Create or Update content
         const form = event.target;
         const formData = new FormData(form);
-
-        const { data } = await contentsApi.create({
+        const contentData = {
             title: formData.get('title'),
             body: formData.get('body'),
             type: formData.get('type'),
-            mediaPaths: uploadResult.data.paths,
+            mediaPaths: finalMediaPaths,
             tags: formData.get('tags') ? formData.get('tags').split(/[,，]/).map(t => t.trim()).filter(Boolean) : [],
             location: formData.get('location'),
-        });
+        };
 
-        showToast('内容创建成功');
+        if (currentEditingId) {
+            await contentsApi.update(currentEditingId, contentData);
+            showToast('内容更新成功');
+        } else {
+            await contentsApi.create(contentData);
+            showToast('内容创建成功');
+        }
+
         closeModal('create-content-modal');
         loadContents();
     } catch (error) {
@@ -418,16 +508,32 @@ async function submitSchedule(event) {
 
     const form = event.target;
     const formData = new FormData(form);
+    const rescheduleId = document.getElementById('create-schedule-modal').dataset.rescheduleId;
 
     try {
-        await schedulesApi.create({
-            contentId: parseInt(formData.get('contentId')),
-            accountId: parseInt(formData.get('accountId')),
-            scheduledAt: formData.get('scheduledAt'),
-        });
+        if (rescheduleId) {
+            // Update existing schedule
+            await schedulesApi.update(rescheduleId, {
+                scheduledAt: formData.get('scheduledAt'),
+                status: 'pending', // Reset status to pending
+                errorMessage: null,
+                retryCount: 0
+            });
+            showToast('计划已重新排期');
+        } else {
+            // Create new schedule
+            await schedulesApi.create({
+                contentId: parseInt(formData.get('contentId')),
+                accountId: parseInt(formData.get('accountId')),
+                scheduledAt: formData.get('scheduledAt'),
+            });
+            showToast('发布计划创建成功');
+        }
 
-        showToast('发布计划创建成功');
         closeModal('create-schedule-modal');
+        // Clear dataset
+        delete document.getElementById('create-schedule-modal').dataset.rescheduleId;
+
         loadContents();
         loadSchedules();
     } catch (error) {
@@ -483,6 +589,14 @@ function renderSchedules(schedules) {
             <i class="ph ph-x"></i> 取消
           </button>
         ` : ''}
+        ${schedule.status === 'failed' || schedule.status === 'cancelled' ? `
+          <button class="btn btn-small btn-primary" onclick="retrySchedule(${schedule.id})">
+            <i class="ph ph-arrow-clockwise"></i> 重试
+          </button>
+          <button class="btn btn-small btn-default" onclick="reschedule(${schedule.id})">
+            <i class="ph ph-calendar"></i> 改期
+          </button>
+        ` : ''}
       </div>
     </div>
   `).join('');
@@ -508,6 +622,58 @@ async function cancelSchedule(id) {
     } catch (error) {
         showToast(error.message, 'error');
     }
+}
+
+async function retrySchedule(id) {
+    try {
+        await schedulesApi.retry(id);
+        showToast('已加入重试队列');
+        loadSchedules();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+async function reschedule(id) {
+    try {
+        const { data: schedule } = await schedulesApi.getById(id);
+        // Reuse schedule modal helper, but we need to pre-fill content and ideally "update" the schedule instead of creating new
+        // Ideally we should have `editSchedule` but for now let's just create new one or update existing if API supports it.
+        // Our backend API currently: PUT /schedules/:id supports updating scheduledAt and status.
+
+        // Let's implement a specific flow for rescheduling
+        document.getElementById('schedule-content-id').value = schedule.content_id;
+
+        // Fetch accounts to populate select
+        const { data: accounts } = await accountsApi.getAll();
+        const activeAccounts = accounts.filter(a => a.status === 'active' && a.isLoggedIn);
+        document.getElementById('schedule-account-select').innerHTML = activeAccounts.map(a =>
+            `<option value="${a.id}" ${a.id === schedule.account_id ? 'selected' : ''}>${a.nickname || `账号 ${a.id}`}</option>`
+        ).join('');
+
+        // Set time to now + 5 min default, or original + 1 hour? Let's do now + 5 min
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 5);
+        const timeStr = formatDateTimeForInput(now);
+        document.querySelector('input[name="scheduledAt"]').value = timeStr;
+
+        // Store the schedule ID we are rescheduling so we can UPDATE instead of CREATE
+        document.getElementById('create-schedule-modal').dataset.rescheduleId = id;
+
+        openModal('create-schedule-modal');
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+// Helper for datetime input
+function formatDateTimeForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 // ==================== Logs ====================
@@ -710,12 +876,23 @@ function showToast(message, type = 'success') {
 
 function formatTime(dateStr) {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+
+    let date;
+    // SQLite CAUTION: DEFAULT CURRENT_TIMESTAMP creates strings like "2023-01-01 12:00:00" (UTC)
+    // Browsers often treat this as Local Time if 'Z' is missing.
+    // We must force it to be treated as UTC.
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)) {
+        date = new Date(dateStr.replace(' ', 'T') + 'Z');
+    } else {
+        date = new Date(dateStr);
+    }
+
     return date.toLocaleString('zh-CN', {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: false
     });
 }
 

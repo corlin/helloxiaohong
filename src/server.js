@@ -94,8 +94,8 @@ wss.on('connection', (ws, req) => {
 });
 
 // 启动服务器
-server.listen(config.port, () => {
-    logger.info(`🚀 服务器已启动: http://localhost:${config.port}`);
+server.listen(config.port, config.host, () => {
+    logger.info(`🚀 服务器已启动: http://${config.host}:${config.port}`);
     logger.info(`📅 调度器已启动`);
 
     // 启动任务调度器
